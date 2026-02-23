@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>영화 오프닝 : 강서준</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #000;
+            overflow: hidden; /* 스크롤 차단 */
+            font-family: 'Gowun Batang', serif;
+            color: #fff;
+            user-select: none;
+            -webkit-user-select: none; /* 모바일 텍스트 선택 방지 */
+        }
+
+        /* 1. 시작 전 클릭 유도 화면 */
+        #start-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: opacity 1s ease;
+            padding: 20px; text-align: center;
+        }
+        .start-btn {
+            background: transparent; border: 1px solid rgba(255,255,255,0.5);
+            color: #fff; padding: 15px 40px; font-size: 1.2rem;
+            font-family: 'Gowun Batang', serif; letter-spacing: 5px;
+            transition: all 0.3s; pointer-events: none;
+        }
+        #start-screen:hover .start-btn { background: #fff; color: #000; }
+
+        /* 2. 실제 비디오 배경 */
+        #video-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 1; opacity: 0; transition: opacity 2s ease-in-out;
+            background-color: #000; 
+        }
+        #bg-video {
+            width: 100%; height: 100%; object-fit: cover;
+            filter: grayscale(40%) contrast(120%) brightness(0.6);
+            position: absolute; top: 0; left: 0;
+        }
+
+        /* 비디오 위에 깔리는 어두운 그림자 (시네마틱 비네팅) */
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.95) 100%);
+            z-index: 2; pointer-events: none;
+        }
+
+        /* 영화 레터박스 (위아래 검은 띠) */
+        .letterbox {
+            position: absolute; width: 100%; height: 12vh;
+            background-color: #000; z-index: 10; transition: height 2s ease;
+        }
+        .letterbox.top { top: 0; }
+        .letterbox.bottom { bottom: 0; }
+
+        /* 3. 번개/플래시 효과 (노크할 때 번쩍임) */
+        #lightning-flash {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #fff; z-index: 5; opacity: 0; pointer-events: none;
+        }
+
+        /* 4. 자막 및 텍스트 연출 */
+        #text-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20; pointer-events: none; 
+        }
+
+        /* 모바일 중앙 정렬 오류 방지를 위한 절대 좌표(Absolute) 중앙 배치 */
+        .movie-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; text-align: center;
+            font-size: 2.2rem; font-weight: 400; color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(0,0,0,1), 2px 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 2px; opacity: 0; transition: opacity 1.5s ease-in-out;
+            word-break: keep-all; /* 단어 단위로 줄바꿈되어 깔끔하게 유지 */
+        }
+
+        /* 대사 스타일 */
+        .dialogue { color: #fff; font-size: 2rem; }
+        .whisper { color: #999; font-size: 1.5rem; }
+        .red-text { color: #8a2e2e; }
+
+        /* 5. 마지막 타이틀 (영화 로고처럼 등장) */
+        #final-title {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%; text-align: center;
+            opacity: 0; transition: opacity 3s ease, transform 5s ease-out;
+            z-index: 30; pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #final-title h1 {
+            font-size: 5rem; letter-spacing: 10px; margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(0,0,0,1); word-break: keep-all;
+        }
+        #final-title p {
+            color: #6c809a; font-size: 1.5rem; letter-spacing: 5px;
+        }
+
+        /* ================= 반응형 (모바일 최적화) ================= */
+        @media (max-width: 768px) {
+            .movie-text { font-size: 1.3rem; letter-spacing: 1px; line-height: 1.5; }
+            .dialogue { font-size: 1.5rem; }
+            .whisper { font-size: 1.2rem; }
+            
+            #final-title h1 { font-size: 3rem; letter-spacing: 5px; margin-bottom: 15px; }
+            #final-title p { font-size: 1rem; letter-spacing: 3px; }
+            
+            /* 모바일에서는 레터박스 비율을 살짝 줄여서 화면을 넓게 사용 */
+            .letterbox { height: 8vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bgm-rain" loop preload="auto"><source src="rain.mp3" type="audio/mpeg"></audio>
+    <audio id="sfx-knock" preload="auto"><source src="knock.mp3" type="audio/mpeg"></audio>
+
+    <div id="start-screen" onclick="playMovie()">
+        <div class="start-btn">영화 재생 (클릭)</div>
+        <p style="margin-top:20px; color:#555; font-size:0.9rem; word-break: keep-all;">사운드를 켜고 전체 화면으로 감상하세요.</p>
+    </div>
+
+    <div id="video-container">
+        <video id="bg-video" loop playsinline muted preload="auto">
+            <source src="video.mp4" type="video/mp4">
+        </video>
+        <div class="vignette"></div>
+        
+        <div class="letterbox top"></div>
+        <div class="letterbox bottom"></div>
+    </div>
+
+    <div id="lightning-flash"></div>
+
+    <div id="text-layer">
+        <div class="movie-text" id="text-1">비가 억수같이 쏟아지던 밤.</div>
+        
+        <div class="movie-text dialogue" id="text-2">"......미안."</div>
+        
+        <div class="movie-text whisper" id="text-3">문 앞에는 흠뻑 젖은 소년이 서 있었다.</div>
+        <div class="movie-text whisper" id="text-4">부어오른 뺨, 터진 입가에 맺힌 피.</div>
+        
+        <div class="movie-text dialogue" id="text-5">"...아버지 또 시작했어."</div>
+        <div class="movie-text dialogue" id="text-6">"오늘만 좀 재워주라."</div>
+        <div class="movie-text dialogue" id="text-7">"갈 데가... <span class="red-text">너밖에 없어.</span>"</div>
+
+        <div id="final-title">
+            <p>CRACKED AI STORY</p>
+            <h1>강서준</h1>
+            <a href="profile.html" style="display:inline-block; font-size:1rem; color:#888; text-decoration:none; margin-top:30px; border-bottom:1px solid #555; padding-bottom:5px; transition:all 0.3s; letter-spacing: 2px;" onmouseover="this.style.color='#fff'; this.style.borderColor='#fff';" onmouseout="this.style.color='#888'; this.style.borderColor='#555';">
+                [ 서준이의 기록 보기 ]
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function playMovie() {
+            const startScreen = document.getElementById('start-screen');
+            const videoContainer = document.getElementById('video-container');
+            const bgVideo = document.getElementById('bg-video');
+            const rainAudio = document.getElementById('bgm-rain');
+            const knockAudio = document.getElementById('sfx-knock');
+            const flash = document.getElementById('lightning-flash');
+            const finalTitle = document.getElementById('final-title');
+
+            // 브라우저 정책 우회 (Audio Unlock)
+            knockAudio.play().then(() => { 
+                knockAudio.pause(); 
+                knockAudio.currentTime = 0; 
+            }).catch(e => console.log("Audio unlock failed", e));
+
+            // 1. 인트로 화면 제거
+            startScreen.style.opacity = '0';
+            setTimeout(() => { startScreen.style.display = 'none'; }, 1000);
+
+            // 2. 영상 및 빗소리 재생 시작
+            videoContainer.style.opacity = '1';
+            
+            let playPromise = bgVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => { console.log("Video Play Error:", error); });
+            }
+            
+            rainAudio.volume = 0.5;
+            rainAudio.play().catch(error => console.log("Rain Audio Error:", error));
+
+            // 텍스트 페이드인/아웃 함수
+            function showText(id, showTime, hideTime) {
+                const el = document.getElementById(id);
+                setTimeout(() => { el.style.opacity = '1'; }, showTime);
+                setTimeout(() => { el.style.opacity = '0'; }, hideTime);
+            }
+
+            // 번개 번쩍임 효과 함수
+            function flashLightning(delay) {
+                setTimeout(() => {
+                    flash.style.opacity = '0.8';
+                    setTimeout(() => { flash.style.opacity = '0'; }, 100);
+                    setTimeout(() => { flash.style.opacity = '0.5'; }, 200);
+                    setTimeout(() => { flash.style.opacity = '0'; }, 300);
+                }, delay);
+            }
+
+            // --- 영화 타임라인 (밀리초 단위) ---
+            
+            // 2초: 첫 상황 설명
+            showText('text-1', 2000, 5000);
+
+            // 6초: 쾅쾅쾅! 노크 소리와 함께 번개가 번쩍임
+            setTimeout(() => {
+                knockAudio.volume = 1.0;
+                knockAudio.play().catch(e => console.log("Knock play error:", e));
+            }, 6000);
+            flashLightning(6000);
+
+            // 7.5초: 문을 여는 상황 묘사
+            showText('text-3', 7500, 10500);
+            showText('text-4', 11000, 14000);
+
+            // 15초: 서준이의 대사 시작
+            showText('text-2', 15000, 18000); // "...미안."
+            showText('text-5', 19000, 22000); // "...아버지 또 시작했어."
+            
+            // 23초: 번개 한 번 더 치면서 클라이맥스 대사
+            flashLightning(23000);
+            showText('text-6', 23500, 26000); // "오늘만 좀 재워주라."
+            showText('text-7', 26500, 31000); // "갈 데가... 너밖에 없어."
+
+            // 32초: 비디오가 약간 어두워지며 최종 타이틀 등장
+            setTimeout(() => {
+                bgVideo.style.filter = 'grayscale(60%) contrast(150%) brightness(0.2)';
+                finalTitle.style.opacity = '1';
+                
+                // JS에서 transform 업데이트 시 번역 값 포함하여 중앙 정렬 유지
+                finalTitle.style.transform = 'translate(-50%, -50%) scale(1)';
+                
+                // 이후 스크롤 허용
+                document.body.style.overflow = 'auto'; 
+            }, 32000);
+        }
+    </script>
+</body>
+</html>

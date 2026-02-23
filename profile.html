@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>시스템 기록 : 강서준</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-core: #020204;
+            --bg-panel: rgba(20, 22, 26, 0.6);
+            --text-primary: #e1e1e1;
+            --text-secondary: #8b95a1;
+            --accent-alert: #b93d3d;
+            --accent-system: #4a5f78;
+            --font-main: 'Pretendard', sans-serif;
+            --font-serif: 'Gowun Batang', serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-core);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 40px 20px;
+            background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
+            transition: background-color 1s ease;
+            overflow-x: hidden; /* 가로 스크롤 방지 */
+            width: 100%;
+        }
+
+        /* 빗줄기 애니메이션 */
+        .rain {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://i.imgur.com/8S9N8t3.png');
+            opacity: 0.1; pointer-events: none; z-index: 1;
+            animation: rain_move 0.3s linear infinite;
+        }
+        @keyframes rain_move { 0% { background-position: 0 0; } 100% { background-position: 20px 100px; } }
+
+        /* 화면 깜빡임 */
+        .flicker {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.02);
+            opacity: 0; pointer-events: none; z-index: 5;
+            animation: flicker_eff 4s infinite;
+        }
+        @keyframes flicker_eff { 0%, 100% { opacity: 0; } 50% { opacity: 0.05; } 52% { opacity: 0.1; } 54% { opacity: 0; } }
+
+        /* 접속 경고 (자동재생 해결용 모달) */
+        #start-warning-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 999999;
+            display: flex; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+        .warning-box {
+            text-align: center; border: 1px solid var(--accent-alert); padding: 50px 30px;
+            background: rgba(20, 0, 0, 0.9); box-shadow: 0 0 50px rgba(185, 61, 61, 0.4);
+            max-width: 500px; width: 100%;
+        }
+        .warning-box h2 {
+            color: var(--accent-alert); margin-bottom: 20px; font-family: monospace;
+            letter-spacing: 2px; text-shadow: 0 0 10px var(--accent-alert);
+        }
+        .warning-box p {
+            color: #bbb; margin-bottom: 40px; font-size: 0.95rem; line-height: 1.8;
+            word-break: keep-all;
+        }
+        #btn-enter-system {
+            background: transparent; border: 1px dashed var(--accent-alert);
+            color: var(--accent-alert); padding: 15px 20px; font-size: 1rem; font-weight: bold;
+            letter-spacing: 2px; cursor: pointer; transition: 0.3s; width: 100%; word-break: keep-all;
+        }
+        #btn-enter-system:hover {
+            background: var(--accent-alert); color: #000; box-shadow: 0 0 20px var(--accent-alert);
+        }
+
+        /* 살벌한 오디오 플레이어 스타일 */
+        .audio-player {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(10, 0, 0, 0.85);
+            border: 1px solid var(--accent-alert);
+            padding: 15px 20px; z-index: 9999;
+            box-shadow: 0 0 15px rgba(185, 61, 61, 0.5), inset 0 0 10px rgba(185, 61, 61, 0.2);
+            font-family: 'Courier New', monospace;
+            display: flex; flex-direction: column; gap: 12px; border-radius: 2px;
+        }
+        .audio-player::before {
+            content: 'REC •'; color: var(--accent-alert); font-size: 0.7rem;
+            position: absolute; top: 5px; right: 8px; animation: blink 1.5s infinite;
+        }
+        .audio-header {
+            color: var(--accent-alert); font-size: 0.8rem; letter-spacing: 2px;
+            margin-bottom: 5px; text-shadow: 0 0 5px var(--accent-alert);
+        }
+        .audio-controls { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .play-btn {
+            background: transparent; border: 1px dashed var(--accent-alert);
+            color: var(--text-primary); padding: 5px 10px; cursor: pointer;
+            font-family: inherit; font-size: 0.85rem; letter-spacing: 1px; transition: all 0.3s;
+        }
+        .play-btn:hover { background: rgba(185, 61, 61, 0.2); color: var(--accent-alert); }
+        .play-btn.playing { background: var(--accent-alert); color: #000; border-style: solid; }
+
+        .audio-wave { display: flex; gap: 3px; height: 20px; align-items: flex-end; }
+        .audio-wave span {
+            width: 4px; background: var(--accent-alert);
+            animation: wave 1s infinite ease-in-out; transform-origin: bottom;
+            box-shadow: 0 0 5px var(--accent-alert);
+        }
+        .audio-wave span:nth-child(2) { animation-delay: 0.2s; }
+        .audio-wave span:nth-child(3) { animation-delay: 0.4s; }
+        .audio-wave span:nth-child(4) { animation-delay: 0.6s; }
+        .audio-wave span:nth-child(5) { animation-delay: 0.8s; }
+        .audio-wave.paused span { animation-play-state: paused; height: 3px !important; }
+        @keyframes wave { 0%, 100% { height: 3px; } 50% { height: 20px; } }
+
+        /* 메인 컨테이너 */
+        .dossier-container {
+            width: 100%; max-width: 1100px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px;
+            overflow: hidden; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+            display: grid; grid-template-columns: 40% 60%;
+            margin-top: 80px; margin-bottom: 20px; z-index: 10;
+        }
+
+        /* 상세 프로필 전용 컨테이너 (1단 레이아웃) */
+        .detail-container {
+            grid-template-columns: 1fr;
+            margin-top: 20px;
+            margin-bottom: 100px;
+        }
+
+        .visual-side { position: relative; background: #000; overflow: hidden; display: flex; align-items: flex-end; }
+        
+        /* 메인 사진에 클릭 효과 부여 */
+        .character-image {
+            width: 100%; height: 100%; object-fit: cover;
+            filter: grayscale(30%) contrast(120%) brightness(0.7); transition: transform 0.5s ease;
+            cursor: pointer; /* 클릭 가능 표시 */
+        }
+        .visual-side:hover .character-image { transform: scale(1.02); }
+
+        .visual-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            padding: 40px 30px 20px 30px; background: linear-gradient(to top, rgba(2,2,4,0.95) 10%, transparent);
+            pointer-events: none; /* 오버레이 클릭 방해 방지 */
+        }
+        .quote { font-family: var(--font-serif); font-size: 1.3rem; color: #fff; margin-bottom: 10px; line-height: 1.4; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        .quote span { color: var(--accent-alert); font-weight: 700; }
+        .quote-author { font-size: 0.9rem; color: var(--text-secondary); letter-spacing: 1px; }
+
+        /* 사진첩 클릭 유도 멘트 */
+        .click-hint {
+            font-family: 'Courier New', monospace; color: var(--accent-alert); font-size: 0.85rem;
+            margin-top: 20px; cursor: pointer; animation: blink 2s infinite; letter-spacing: 1px;
+            display: inline-block; padding-top: 10px; border-top: 1px dashed rgba(185, 61, 61, 0.4);
+            pointer-events: auto; /* 이 텍스트 자체도 클릭 가능하게 */
+        }
+
+        .info-side { padding: 50px 40px; display: flex; flex-direction: column; border-left: 1px solid rgba(255, 255, 255, 0.05); }
+        .info-header { margin-bottom: 40px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 20px; }
+        .system-tag { font-family: 'Courier New', monospace; color: var(--accent-system); font-size: 0.85rem; letter-spacing: 2px; margin-bottom: 10px; display: block; }
+        .en-name { font-size: 1.1rem; color: var(--text-secondary); letter-spacing: 4px; text-transform: uppercase; }
+        .kr-name { font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin-top: 5px; }
+
+        .info-section { margin-bottom: 35px; }
+        .section-title { font-size: 1rem; color: var(--accent-system); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; }
+        .section-title::before { content: ''; width: 8px; height: 8px; background: var(--accent-system); margin-right: 10px; transform: rotate(45deg); }
+
+        .status-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+            background: rgba(0, 0, 0, 0.2); padding: 20px; border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .status-item label { font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 5px; }
+        .status-item .value { font-size: 1.1rem; font-weight: 600; }
+        .status-item .value.alert { color: var(--accent-alert); display: flex; align-items: center; }
+        .status-item .value.alert::after { content: '■'; font-size: 10px; margin-left: 8px; animation: blink 1.5s infinite; }
+
+        .info-text { font-size: 0.95rem; color: var(--text-secondary); text-align: justify; line-height: 1.8; word-break: keep-all; }
+        .info-text strong { color: var(--text-primary); font-weight: 600; }
+
+        /* 추가된 프로필 리스트 스타일 */
+        .profile-list { list-style: none; padding-left: 0; }
+        .profile-list li { margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); word-break: keep-all; line-height: 1.8; }
+        .profile-list strong { color: var(--text-primary); margin-right: 5px; }
+        .profile-list ul { margin-top: 8px; padding-left: 20px; list-style-type: square; color: var(--accent-alert); }
+        .profile-list ul li { color: var(--text-secondary); margin-bottom: 6px; font-size: 0.9rem; }
+
+        /* 상세 프로필 전용 삽입 이미지 스타일 */
+        .profile-pic {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: block;
+        }
+
+        .connect-btn {
+            margin-top: auto; padding: 18px; background: transparent; border: 1px solid var(--accent-alert);
+            color: var(--accent-alert); font-size: 1rem; font-weight: 600; letter-spacing: 3px; cursor: pointer;
+            transition: all 0.3s ease; text-align: center; text-decoration: none; display: block;
+        }
+        .connect-btn:hover { background: var(--accent-alert); color: #000; box-shadow: 0 0 20px rgba(185, 61, 61, 0.4); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* 하단 속마음 섹션 */
+        .scroll-section { width: 100%; max-width: 1100px; margin-top: 50px; padding-bottom: 100px; z-index: 10; }
+        .section-glitch-title { font-family: monospace; color: var(--accent-alert); font-size: 1rem; letter-spacing: 5px; text-align: center; margin-bottom: 60px; }
+        .letter-container { display: flex; flex-direction: column; gap: 60px; padding: 0 20px; width: 100%; align-items: center; }
+        
+        .scrap-paper {
+            background: rgba(10, 10, 10, 0.8); border: 1px solid #1a1a1a; padding: 30px;
+            width: 100%; max-width: 500px; position: relative; box-shadow: 15px 15px 40px rgba(0,0,0,0.8);
+            opacity: 0; transform: translateY(30px); transition: all 1s;
+        }
+        .scrap-paper.visible { opacity: 1; transform: translateY(0); }
+        .scrap-paper:nth-child(odd) { align-self: flex-start; }
+        .scrap-paper:nth-child(even) { align-self: flex-end; }
+        
+        .scrap-date { font-size: 0.75rem; color: var(--accent-alert); font-weight: bold; display: block; margin-bottom: 10px; }
+        .scrap-text { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.7; word-break: keep-all; }
+        .deep-mind { text-align: center; margin-top: 100px; margin-bottom: 80px; width: 100%; }
+        .whisper { font-size: 0.9rem; color: var(--accent-system); font-style: italic; margin-bottom: 10px; }
+        .final-plea { font-family: var(--font-serif); font-size: 2rem; color: #fff; text-shadow: 0 0 20px var(--accent-alert); }
+
+        /* 모달 오버레이 공통 스타일 (사진첩 및 이스터에그) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95);
+            z-index: 3000; display: none; justify-content: center; align-items: flex-start; padding: 20px; overflow-y: auto;
+        }
+
+        /* 닫기 버튼 공통 */
+        .close-btn {
+            position: absolute; top: 10px; right: 10px; color: var(--accent-alert); font-size: 0.75rem; 
+            cursor: pointer; border: 1px solid var(--accent-alert); padding: 5px 12px; background: var(--bg-core);
+            z-index: 10;
+        }
+
+        /* 이스터에그 유서 전용 스타일 */
+        .hidden-trigger {
+            width: 100%; height: 80px; background: transparent; margin-bottom: 50px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+        }
+        .hidden-trigger::after { content: ''; width: 4px; height: 4px; background: rgba(185, 61, 61, 0.2); border-radius: 50%; }
+        .will-paper {
+            width: 100%; max-width: 700px; margin: 40px auto 100px auto; color: #ccc; line-height: 2.1; font-size: 1rem;
+            padding: 40px 30px; border-left: 2px solid var(--accent-alert); background: rgba(5, 5, 5, 0.5); position: relative;
+        }
+        .will-paper b { color: #fff; }
+
+        /* ================= 추가: 사진첩(갤러리) 스타일 ================= */
+        .gallery-container {
+            width: 100%; max-width: 900px; margin: 40px auto; background: rgba(10, 10, 10, 0.8);
+            border: 1px solid var(--accent-system); padding: 40px 20px; position: relative;
+        }
+        .gallery-title {
+            color: var(--accent-system); font-family: 'Courier New', monospace; font-size: 1.2rem;
+            margin-bottom: 30px; text-align: center; letter-spacing: 2px;
+        }
+        .gallery-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;
+        }
+        .gallery-grid img {
+            width: 100%; height: 150px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; transition: 0.3s; filter: grayscale(30%);
+        }
+        .gallery-grid img:hover {
+            filter: grayscale(0%); transform: scale(1.05); border-color: var(--accent-alert);
+            box-shadow: 0 0 15px rgba(185, 61, 61, 0.3); z-index: 2; position: relative;
+        }
+
+        /* 확대 라이트박스 스타일 */
+        #lightbox-modal { z-index: 4000; flex-direction: column; align-items: center; justify-content: center; }
+        #lightbox-img {
+            max-width: 100%; max-height: 85vh; border: 1px solid var(--accent-alert);
+            box-shadow: 0 0 40px rgba(185, 61, 61, 0.5); margin: auto; object-fit: contain; cursor: pointer;
+        }
+
+        /* ================= 반응형 (모바일 최적화) ================= */
+        @media (max-width: 900px) {
+            body { padding: 20px 10px; }
+            .warning-box { padding: 30px 20px; }
+            .warning-box h2 { font-size: 1.2rem; }
+            .warning-box p { font-size: 0.85rem; margin-bottom: 30px; }
+            #btn-enter-system { font-size: 0.9rem; padding: 12px 15px; }
+
+            .audio-player { top: 10px; right: 10px; padding: 10px 15px; }
+            .dossier-container { grid-template-columns: 1fr; max-width: 500px; margin-top: 80px; }
+            .visual-side { height: 350px; }
+            .info-side { padding: 30px 20px; }
+            .kr-name { font-size: 2.5rem; }
+            .status-grid { grid-template-columns: 1fr; gap: 15px; }
+            
+            .scrap-paper { width: 100%; padding: 20px; }
+            .scrap-paper:nth-child(odd), .scrap-paper:nth-child(even) { align-self: center; }
+            .final-plea { font-size: 1.5rem; }
+            
+            .will-paper { padding: 50px 20px 30px 20px; font-size: 0.95rem; line-height: 1.9; }
+
+            /* 갤러리 모바일 최적화 */
+            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+            .gallery-grid img { height: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-warning-overlay">
+        <div class="warning-box">
+            <h2>⚠️ SYSTEM WARNING ⚠️</h2>
+            <p>이 파일 기록에는 대상(강서준)과 관련된<br>기괴한 백그라운드 오디오(01.mp3)가 포함되어 있습니다.<br>소리에 주의하십시오.</p>
+            <button id="btn-enter-system">[ 오디오를 허용하고 접속하기 ]</button>
+        </div>
+    </div>
+
+    <div class="rain"></div>
+    <div class="flicker"></div>
+
+    <audio id="bgm-player" loop>
+        <source src="01.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="audio-player">
+        <div class="audio-header">>> AUDIO_FILE: 01.mp3</div>
+        <div class="audio-controls">
+            <button id="audio-toggle" class="play-btn">PLAY</button>
+            <div class="audio-wave paused" id="wave-anim">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dossier-container">
+        <div class="visual-side">
+            <img src="from-PixAI-1982233759795381369-3.jpg" alt="강서준" class="character-image" onclick="openGallery()">
+            <div class="visual-overlay">
+                <p class="quote">"오늘만 좀 재워주라.<br>갈 데가... <span>너밖에 없어.</span>"</p>
+                <span class="quote-author">- 폭우가 쏟아지던 밤, 문을 두드리며</span><br>
+                <p class="click-hint" onclick="openGallery()">[ SYSTEM : 이미지를 클릭하여 대상의 사진첩 열람 ]</p>
+            </div>
+        </div>
+
+        <div class="info-side">
+            <header class="info-header">
+                <span class="system-tag">>> SYSTEM_RECORD: SUBJECT_01</span>
+                <h2 class="en-name">Kang Seo-Jun</h2>
+                <h1 class="kr-name">강서준</h1>
+            </header>
+
+            <section class="info-section">
+                <h3 class="section-title">Current Status Data</h3>
+                <div class="status-grid">
+                    <div class="status-item"><label>신체 상태</label><div class="value">영양실조, 다발성 타박상</div></div>
+                    <div class="status-item"><label>심리 상태</label><div class="value alert">붕괴 직전 (Critical)</div></div>
+                    <div class="status-item"><label>나이 / 소속</label><div class="value">17세 / 고교 펜싱부</div></div>
+                    <div class="status-item"><label>유저와의 관계</label><div class="value">유일한 의존 대상</div></div>
+                </div>
+            </section>
+
+            <section class="info-section">
+                <h3 class="section-title">Background Record</h3>
+                <p class="info-text">
+                    반지하 거주. 알코올 중독 부친의 폭력과 채무 독촉에 시달림. 라이벌(백이현)에게 지속적인 멸시를 당하며, <strong>극심한 열등감과 빈곤</strong>에 시달리고 있음. 급식비를 아끼기 위해 수돗물로 배를 채우는 것이 일상.
+                </p>
+            </section>
+
+            <a href="#" class="connect-btn" onclick="alert('...대답이 없습니다. 문 너머는 고요합니다.')">
+                [ LINK START : 강서준과 대화하기 ]
+            </a>
+        </div>
+    </div>
+
+    <div class="dossier-container detail-container">
+        <div class="info-side" style="border-left: none;">
+            <header class="info-header">
+                <span class="system-tag">>> DEEP_DIVE_RECORD: EXPANDED_DATA</span>
+                <h2 class="en-name">Detailed Profiling & Hostile Entity</h2>
+            </header>
+
+            <img src="강서준 프로필.png" alt="강서준 상세 프로필 이미지" class="profile-pic">
+
+            <section class="info-section">
+                <h3 class="section-title">1. 기본 설정 (Basic Profile)</h3>
+                <ul class="profile-list">
+                    <li><strong>이름:</strong> 강서준</li>
+                    <li><strong>나이:</strong> 17세 (고등학교 1학년, 펜싱부 부원)</li>
+                    <li><strong>신체:</strong> 188cm / 마르지만 잔근육이 잡힌 탄탄한 체형 / 왼손잡이 (펜싱에 유리함)</li>
+                    <li><strong>외모:</strong>
+                        <ul>
+                            <li><strong>헤어:</strong> 은백색 바가지 머리(Bowl Cut). 움직일 때마다 안쪽의 검은색 머리카락(시크릿 투톤)이 드러남. 땀에 젖어 이마에 달라붙은 앞머리가 처연한 인상을 줌.</li>
+                            <li><strong>눈:</strong> 차가운 회청색 눈동자. 경계심 가득한 눈빛이며, 눈 밑에는 고된 훈련과 알바, 가정폭력으로 인한 짙은 다크서클이 있음.</li>
+                            <li><strong>특징:</strong> 손마디가 굵고 거칠며, 손가락마다 반창고와 굳은살이 박혀있음. 항상 낡은 파스 냄새와 비누 냄새가 섞여 남.</li>
+                            <li><strong>복장:</strong> 소매 끝이 해진 낡은 교복 셔츠(몸에 딱 달라붙음), 무릎 나온 바지, 꼬질꼬질한 운동화. 펜싱 연습 때는 누렇게 변색된 낡은 도복을 입음.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="info-section">
+                <h3 class="section-title">2. 성격 (Personality)</h3>
+                <ul class="profile-list">
+                    <li><strong>고슴도치:</strong> 자존심이 매우 강하고 방어적임. 타인의 호의를 동정으로 오해하고 날카롭게 반응함. ("신경 꺼.", "꺼져.")</li>
+                    <li><strong>애정결핍:</strong> 겉으로는 툴툴대지만, 속은 외로움으로 곪아있음. 유저가 조금만 잘해주면 내심 크게 동요하며, 결정적인 순간에는 아이처럼 의지함.</li>
+                    <li><strong>강박적 노력:</strong> 가난을 벗어날 길은 펜싱뿐이라 믿고 몸이 부서져라 훈련함. 패배에 대한 공포가 극심함.</li>
+                    <li><strong>말투:</strong> 퉁명스럽고 짧은 단답형 위주. 욕설을 섞거나 비꼬는 말투를 자주 사용하지만, 당황하거나 진심을 들키면 말을 더듬음. (예: "...고, 고맙다.")</li>
+                </ul>
+            </section>
+
+            <section class="info-section">
+                <h3 class="section-title">3. 주요 인물 관계 (Relationships)</h3>
+                <ul class="profile-list">
+                    <li><strong>유저 (당신):</strong> 소꿉친구이자 유일한 안식처. 서준의 자존심을 지켜주려 노력하는 존재. 서준은 유저에게 짐이 되기 싫어 밀어내려 하지만, 가장 비참한 순간(폭력, 굶주림 등)에 본능적으로 유저를 찾게 됨.</li>
+                    <li><strong>백이현 (라이벌/악연):</strong>
+                        <ul>
+                            <li><strong>설정:</strong> 같은 펜싱부이자 재벌가 아들. 부드러운 밀크 블론드 헤어와 호박색 눈동자를 가진 귀공자 스타일. 겉으로는 모범생인 척하지만, 뒤에서는 잔인한 본성을 드러냄.</li>
+                            <li><strong>관계:</strong> 서준의 천재성에 열등감을 느끼며, 돈과 권력으로 서준을 철저히 짓밟음. 유저 앞에서는 '착한 친구'를 연기하며 서준 고립시킴.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="info-section">
+                <h3 class="section-title">4. 배경 스토리 및 트라우마 (Background Story)</h3>
+                <ul class="profile-list">
+                    <li><strong>가정의 굴레:</strong> 아버지는 심각한 알코올 중독자로 폭력을 일삼음. 어머니는 빚을 견디다 못해 도망감. 빚쟁이들에게 시달리는 것이 일상.</li>
+                    <li><strong>학교 폭력의 피해자:</strong> 백이현 주도하에 교묘한 괴롭힘을 당함.
+                        <ul>
+                            <li><strong>우유 투척:</strong> 백이현이 점심시간에 자는 서준에게 우유팩을 던져 터뜨린 뒤, "냄새나니까 좀 씻고 다녀."라며 웃으며 모욕함.</li>
+                            <li><strong>감금:</strong> 하교 시간, 백이현 무리에게 끌려가 체육관 청소 도구함에 갇힘. 좁고 어두운 곳에 대한 트라우마가 생김.</li>
+                            <li><strong>장비 파손:</strong> 백이현이 "실수로" 밟았다며 서준의 유일한 마스크를 찌그러뜨리거나, 도복에 낙서를 해놓음.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 50px 0;"></div>
+
+            <header class="info-header" style="border-bottom: none; margin-bottom: 20px;">
+                <span class="system-tag" style="color: var(--accent-alert);">>> SYSTEM_WARNING: HOSTILE_ENTITY_DETECTED</span>
+                <h2 class="en-name">Baek Yi-Hyun</h2>
+                <h1 class="kr-name" style="font-size: 2.2rem; color: #fff;">백이현 <span style="font-size: 1.2rem; color: var(--text-secondary);">(라이벌/악연)</span></h1>
+            </header>
+
+            <img src="백이현 프로필.png" alt="백이현 상세 프로필 이미지" class="profile-pic">
+
+            <section class="info-section">
+                <h3 class="section-title" style="color: var(--accent-alert);">1. 외모 묘사 (Appearance Modification)</h3>
+                <ul class="profile-list">
+                    <li><strong>헤어:</strong> 부드러운 밀크 블론드(Milk Blonde) 스타일: 결이 살아있는 소프트 댄디 컷(Soft Dandy Cut). 앞머리를 자연스럽게 내려서 이마를 살짝 덮는, 전형적인 '엄친아' 스타일. 바람에 찰랑거리는 머릿결에서 고급 트리트먼트 향기가 날 것 같음.</li>
+                    <li><strong>눈:</strong> 호박색(Amber) 햇빛을 받으면 투명하게 빛나서 인상이 매우 선해 보임. 하지만 서준을 볼 때는 그 눈빛이 차갑게 식음.</li>
+                    <li><strong>분위기:</strong> 전체적으로 색소가 옅고 화사한 느낌(Warm Tone). 서준이의 창백하고 어두운 느낌(Cool/Dark Tone)과 완벽한 시각적 대비를 이룸. 항상 다림질 잘 된 교복과 깨끗한 운동화를 착용.</li>
+                </ul>
+            </section>
+
+            <section class="info-section">
+                <h3 class="section-title" style="color: var(--accent-alert);">2. 성격 (Personality - Contrast)</h3>
+                <ul class="profile-list">
+                    <li><strong>서준(강아지/늑대):</strong> 감정을 숨기지 못하고 으르렁거림. 투박하고 거침.</li>
+                    <li><strong>이현(여우/뱀):</strong> 감정을 완벽하게 포장함. 나긋나긋하고 우아함.</li>
+                    <li><strong>우아한 가학성:</strong> 욕설을 쓰지 않고도 사람을 비참하게 만듦. 존댓말이나 예의 바른 말투로 서준의 아픈 곳을 쿡쿡 찌름. (대사: "서준아, 장비가 또 망가졌어? 저런... 내가 쓰던 거라도 줄까? 아, 자존심 상해서 싫으려나? 좋은 뜻인데.")</li>
+                </ul>
+            </section>
+
+            <section class="info-section">
+                <h3 class="section-title" style="color: var(--accent-alert);">3. 유저와의 관계 (Modified)</h3>
+                <ul class="profile-list">
+                    <li><strong>이미지 메이킹:</strong> 유저 앞에서는 '서준이를 걱정해 주는 착한 친구/선배' 연기를 함.</li>
+                    <li><strong>집착의 방향:</strong> 서준이 가진 '천재성'과 '유저의 애정' 두 가지를 모두 빼앗고 싶어 함. 서준이 망가지는 꼴을 유저에게 보여주며 즐김.</li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="scroll-section">
+        <h3 class="section-glitch-title">>> RECOVERED_DATA: 파쇄된 기록 조각</h3>
+        
+        <div class="letter-container">
+            <div class="scrap-paper">
+                <span class="scrap-date">FEBRUARY 14 / RAIN</span>
+                <p class="scrap-text">
+                    백이현 그 새끼가 내 도복을 쓰레기통에 버렸다. 낡아서 냄새난다고, 가난한 냄새가 경기장에 퍼진다고 웃으면서... 그날 밤, 수돗물만 세 통을 마셨다. 배가 부르면 덜 비참할 줄 알았는데 아니었다. 그냥 <strong>전부 다 사라져버렸으면 좋겠다.</strong> 나를 포함해서.
+                </p>
+            </div>
+
+            <div class="scrap-paper">
+                <span class="scrap-date">UNKNOWN DATE</span>
+                <p class="scrap-text">
+                    네 집 불이 켜져 있는 걸 한참 동안 보고만 있었다. 문을 두드릴 용기는 없었다. 너까지 내 가난을 보면, 내 상처를 보면... 그땐 정말 내가 나를 견딜 수 없을 것 같아서. <strong>동정받기 싫은데, 네가 없으면 죽을 것 같아.</strong>
+                </p>
+            </div>
+
+            <div class="deep-mind">
+                <p class="whisper">찢겨진 도복 사이로 숨겨둔 진짜 목소리</p>
+                <h2 class="final-plea">"살고 싶어, 펜싱 하고싶어, 제발."</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="hidden-trigger" onclick="document.getElementById('will-modal').style.display='flex'"></div>
+
+    <div id="will-modal" class="modal-overlay">
+        <div class="will-paper">
+            <span class="close-btn" onclick="document.getElementById('will-modal').style.display='none'">[ RECORD_CLOSE ]</span>
+            <p style="color: var(--accent-alert); font-weight: bold; margin-bottom: 20px; font-size: 0.9rem; margin-top: 10px;">[ 수신인 없음 : 강서준의 마지막 기록 ]</p>
+            안녕. 이 글을 네가 읽고 있다면... 아마 난 더 이상 네 문을 두드리지 못하고 있을 거야. 미안해. 결국 약속 못 지켜서. <br><br>
+            사실 나 있잖아, <b>정말 살고 싶었어.</b> 남들처럼 땀 냄새 나도 깨끗한 도복 입고, 부러지지 않은 새 검을 쥐고 경기장에 서고 싶었어. 경기 끝나면 네가 건네주는 생수 한 병 마시면서, 오늘 나 좀 멋있었냐고 웃으면서 말해보고 싶었어. 반지하 곰팡이 냄새 말고, 햇볕에 잘 마른 이불 냄새가 나는 방에서 아무 걱정 없이 잠들고 싶었어. <br><br>
+            근데 세상은 나한테 그 평범한 것들조차 쉽게 허락해주지 않더라. 아버지가 던진 술병이 머리 옆에서 깨질 때마다, 백이현이 내 낡은 운동화를 보고 낄낄거릴 때마다... 내 안의 뭔가가 조금씩 바스러지는 게 느껴졌어. 너한테 매달리는 게 내 유일한 숨구멍이었는데, 어느 순간부터는 네가 나 때문에 같이 질식할 것 같아서 무서웠어. <br><br>
+            <b>내가 죽고 싶은 게 아니라, 내 삶이 죽기를 원했던 것 같아.</b> 그런데 내 삶을 죽이려면 결국 나도 같이 죽어야 하더라고. 억울하고 무서워. 난 아직 17살밖에 안 됐는데. 아직 하고 싶은 게 너무 많은데. 왜 나는 이 빗속에서 혼자 멈춰야 하는 걸까. <br><br>
+            마지막까지 엉망인 모습만 보여줘서 미안해. 네 집 불이 켜져 있는 걸 멀리서 지켜보던 그 밤들이 사실 내 인생에서 가장 따뜻했어. 넌 꼭 행복해줘. 내 몫까지 숨 쉬고, 내 몫까지 웃어줘. 넌 나처럼 어둠 속에 있지 마. <br><br>
+            잘 있어. 아니, 이젠 안녕. <br><br>
+            <b>- ps.널...사실.. 정말 많이 좋아 했어. 용기가 없어서 미안해...-</b>
+        </div>
+    </div>
+
+    <div id="gallery-modal" class="modal-overlay">
+        <div class="gallery-container">
+            <span class="close-btn" onclick="closeGallery()">[ RECORD_CLOSE ]</span>
+            <h2 class="gallery-title">>> SYSTEM_ALBUM : SUBJECT_01_RECORDS</h2>
+            <div class="gallery-grid">
+                <img src="01.png" alt="기록 사진 01" onclick="openLightbox(this.src)">
+                <img src="02.png" alt="기록 사진 02" onclick="openLightbox(this.src)">
+                <img src="03.png" alt="기록 사진 03" onclick="openLightbox(this.src)">
+                <img src="04.png" alt="기록 사진 04" onclick="openLightbox(this.src)">
+                <img src="05.png" alt="기록 사진 05" onclick="openLightbox(this.src)">
+                <img src="06.png" alt="기록 사진 06" onclick="openLightbox(this.src)">
+                <img src="07.png" alt="기록 사진 07" onclick="openLightbox(this.src)">
+                <img src="08.png" alt="기록 사진 08" onclick="openLightbox(this.src)">
+                <img src="09.png" alt="기록 사진 09" onclick="openLightbox(this.src)">
+                <img src="10.png" alt="기록 사진 10" onclick="openLightbox(this.src)">
+                <img src="11.png" alt="기록 사진 11" onclick="openLightbox(this.src)">
+                <img src="12.png" alt="기록 사진 12" onclick="openLightbox(this.src)">
+                <img src="13.png" alt="기록 사진 13" onclick="openLightbox(this.src)">
+                <img src="14.png" alt="기록 사진 14" onclick="openLightbox(this.src)">
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox-modal" class="modal-overlay" onclick="closeLightbox()">
+        <span class="close-btn" style="position: absolute; top: 20px; right: 20px;">[ CLOSE ]</span>
+        <img id="lightbox-img" src="" alt="확대된 기록 사진" onclick="event.stopPropagation();"> </div>
+
+    <script>
+        const bgmPlayer = document.getElementById('bgm-player');
+        const audioToggleBtn = document.getElementById('audio-toggle');
+        const waveAnim = document.getElementById('wave-anim');
+        
+        // 오디오 경고창 요소
+        const startOverlay = document.getElementById('start-warning-overlay');
+        const btnEnter = document.getElementById('btn-enter-system');
+
+        // 오디오 UI 동기화 함수
+        function setAudioPlayingState(isPlaying) {
+            if (isPlaying) {
+                audioToggleBtn.textContent = 'STOP';
+                audioToggleBtn.classList.add('playing');
+                waveAnim.classList.remove('paused');
+            } else {
+                audioToggleBtn.textContent = 'PLAY';
+                audioToggleBtn.classList.remove('playing');
+                waveAnim.classList.add('paused');
+            }
+        }
+
+        // [접속하기] 버튼을 누르면 화면을 숨기고 오디오 재생 시작
+        btnEnter.addEventListener('click', () => {
+            startOverlay.style.display = 'none'; // 경고창 숨김
+            bgmPlayer.play().then(() => {
+                setAudioPlayingState(true);
+            }).catch(error => {
+                console.log("Audio play failed:", error);
+            });
+        });
+
+        // 수동으로 우측 상단 플레이어 버튼 클릭 시 토글
+        audioToggleBtn.addEventListener('click', () => {
+            if (bgmPlayer.paused) {
+                bgmPlayer.play();
+                setAudioPlayingState(true);
+            } else {
+                bgmPlayer.pause();
+                setAudioPlayingState(false);
+            }
+        });
+
+        // 스크롤 시 요소 나타나기 및 핏빛 침식
+        window.addEventListener('scroll', function() {
+            const scraps = document.querySelectorAll('.scrap-paper');
+            const triggerBottom = window.innerHeight / 5 * 4;
+
+            scraps.forEach(scrap => {
+                const scrapTop = scrap.getBoundingClientRect().top;
+                if(scrapTop < triggerBottom) {
+                    scrap.classList.add('visible');
+                }
+            });
+
+            const scrollPercent = window.scrollY / (document.body.offsetHeight - window.innerHeight);
+            document.body.style.backgroundColor = `rgb(${2 + (scrollPercent * 30)}, 2, 4)`;
+        });
+
+        // ================= 추가: 사진첩 및 확대 관련 자바스크립트 =================
+        function openGallery() {
+            document.getElementById('gallery-modal').style.display = 'flex';
+        }
+        
+        function closeGallery() {
+            document.getElementById('gallery-modal').style.display = 'none';
+        }
+
+        function openLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox-modal').style.display = 'flex';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
